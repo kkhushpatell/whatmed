@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatMedicine</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f8ff;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #container {
+      text-align: center;
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 5%;
+      max-width: 90%;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 80%;
+    }
+
+    h1 {
+      font-size: 3vw;
+      margin-bottom: 2%;
+    }
+
+    video {
+      border: none;
+      border-radius: 10px;
+      margin: 0;
+      max-height: 70%;
+      width: 100%;
+      display: none;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 1% 3%;
+      font-size: 1.5vw;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 2%;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #ocrResult {
+      font-size: 1.5vw;
+      margin-top: 2%;
+      color: #007bff;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <div id="container">
+    <h1>WhatMedicine</h1>
+    <video autoplay playsinline id="video"></video>
+    <p id="infoText">Welcome to WhatMedicine! This application helps you identify medicines using your camera.</p>
+    <div id="ocrResult"></div>
+    <button id="startButton">Start Camera</button>
+  </div>
+  <script>
+    const video = document.querySelector('#video');
+    const startButton = document.getElementById('startButton');
+    const infoText = document.getElementById('infoText');
+    const ocrResult = document.getElementById('ocrResult');
+    let stream;
+    let ocrInterval;
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.style.display = 'block';
+        startButton.textContent = 'Stop Camera';
+        infoText.style.display = 'none';
+
+        video.addEventListener('loadedmetadata', () => {
+          ocrInterval = setInterval(captureFrame, 1000); // Capture every second
+        });
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Unable to access camera: ' + error.message);
+      }
+    }
+
+    function stopCamera() {
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        video.srcObject = null;
+        video.style.display = 'none';
+        startButton.textContent = 'Start Camera';
+        infoText.style.display = 'block';
+        clearInterval(ocrInterval);
+        ocrResult.textContent = '';
+        ocrResult.style.display = 'none';
+      }
+    }
+
+    async function captureFrame() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL();
+
+      try {
+        const result = await Tesseract.recognize(image, 'eng', {
+          logger: info => console.log(info), // Optional: Log progress
+        });
+        ocrResult.textContent = result.data.text.trim() || 'No text recognized';
+        ocrResult.style.display = 'block';
+      } catch (error) {
+        console.error('OCR error:', error);
+        ocrResult.textContent = 'Error recognizing text';
+        ocrResult.style.display = 'block';
+      }
+    }
+
+    startButton.addEventListener('click', async () => {
+      if (startButton.textContent === 'Start Camera') {
+        startCamera();
+      } else {
+        stopCamera();
+      }
+    });
+  </script>
+</body>
+</html>
