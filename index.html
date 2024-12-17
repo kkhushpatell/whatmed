@@ -29,7 +29,6 @@
       align-items: center;
       justify-content: flex-start;
       height: 80%;
-      position: relative; /* Added for positioning the button */
     }
 
     h1 {
@@ -37,16 +36,23 @@
       margin-bottom: 2%;
     }
 
+    #videoContainer {
+      position: relative;
+      width: 100%;
+      height: auto;
+      max-height: 70%;
+      display: block;
+    }
+
     video {
       border: none;
       border-radius: 10px;
-      margin: 0;
-      max-height: 70%;
       width: 100%;
+      max-height: 100%;
       display: none;
     }
 
-    button {
+    .button {
       background-color: #007bff;
       color: white;
       border: none;
@@ -55,11 +61,28 @@
       font-size: 1.5vw;
       cursor: pointer;
       transition: background-color 0.3s;
-      margin-top: 2%;
+      margin-top: 1%;
     }
 
-    button:hover {
+    .button:hover {
       background-color: #0056b3;
+    }
+
+    #cameraSwitchButton {
+      font-size: 1.7vw;
+      margin-bottom: 1%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #cameraSwitchButton i {
+      margin-right: 0.5em;
+    }
+
+    #startButton {
+      font-size: 1.3vw;
+      padding: 0.8% 2.5%;
     }
 
     #ocrResult {
@@ -68,61 +91,43 @@
       color: #007bff;
     }
 
-    /* Styles for the circular button */
-    #cameraSwitchButton {
-      position: absolute;
-      bottom: 20px; /* Position from the bottom */
-      right: 20px; /* Position from the right */
-      width: 50px; /* Width of the button */
-      height: 50px; /* Height of the button */
-      border-radius: 50%; /* Make it circular */
-      background-color: rgba(0, 123, 255, 0.7); /* Semi-transparent background */
-      color: white;
-      border: none;
-      display: none; /* Initially hidden */
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2vw;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    #cameraSwitchButton:hover {
-      background-color: rgba(0, 123, 255, 1); /* Full opacity on hover */
-    }
-
-    #cameraSwitchButton img {
-      width: 20px; /* Icon size */
-      height: 20px; /* Icon size */
-      margin-right: 5px; /* Space between icon and text */
+    #infoText {
+      font-size: 1.5vw;
+      margin-top: 2%;
+      color: #333;
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 </head>
 <body>
   <div id="container">
     <h1>WhatMedicine</h1>
-    <video autoplay playsinline id="video"></video>
-    <p id="infoText">Welcome to WhatMedicine! This application helps you identify medicines using your camera.</p>
+    <div id="videoContainer">
+      <video autoplay playsinline id="video"></video>
+    </div>
+    <p id="infoText" style="display: block;">Welcome to WhatMedicine! This application helps you identify medicines using your camera.</p>
+    <button id="cameraSwitchButton" class="button" style="display: none;"><i class="fas fa-camera"></i>Switch Camera</button>
+    <button id="startButton" class="button">Start Camera</button>
     <div id="ocrResult"></div>
-    <button id="startButton">Start Camera</button>
-    <button id="switchCameraButton" style="display: none;">Switch Camera</button>
-    
-    <!-- Circular button for switching camera -->
-    <button id="cameraSwitchButton" title="Switch to Rear Camera">
-      <img src="icon-placeholder.png" alt="Camera Icon"> Rear Camera
-    </button>
   </div>
   <script>
     const video = document.querySelector('#video');
     const startButton = document.getElementById('startButton');
-    const switchCameraButton = document.getElementById('switchCameraButton');
+    const cameraSwitchButton = document.getElementById('cameraSwitchButton');
     const infoText = document.getElementById('infoText');
     const ocrResult = document.getElementById('ocrResult');
-    const cameraSwitchButton = document.getElementById('cameraSwitchButton');
     let stream;
     let ocrInterval;
     let currentCamera = 'environment'; // Default to rear camera
+
+    async function toggleCamera() {
+      if (stream) {
+        stopCamera();
+      } else {
+        startCamera();
+      }
+    }
 
     async function startCamera() {
       try {
@@ -130,13 +135,9 @@
         video.srcObject = stream;
         video.style.display = 'block';
         startButton.textContent = 'Stop Camera';
-        switchCameraButton.style.display = 'block'; // Show switch camera button
         infoText.style.display = 'none';
-        cameraSwitchButton.style.display = 'flex'; // Show camera switch button when video is on
-
-        video.addEventListener('loadedmetadata', () => {
-          ocrInterval = setInterval(captureFrame, 1000); // Capture every second
-        });
+        cameraSwitchButton.style.display = 'block';
+        ocrInterval = setInterval(captureFrame, 1000); // Capture every second
       } catch (error) {
         console.error('Error accessing camera:', error);
         alert('Unable to access camera: ' + error.message);
@@ -148,14 +149,20 @@
         const tracks = stream.getTracks();
         tracks.forEach(track => track.stop());
         video.srcObject = null;
+        stream = null;
         video.style.display = 'none';
         startButton.textContent = 'Start Camera';
-        switchCameraButton.style.display = 'none'; // Hide switch camera button
         infoText.style.display = 'block';
-        cameraSwitchButton.style.display = 'none'; // Hide camera switch button when video is off
+        cameraSwitchButton.style.display = 'none';
         clearInterval(ocrInterval);
         ocrResult.textContent = '';
-        ocrResult.style.display = 'none';
+      }
+    }
+
+    async function switchCamera() {
+      currentCamera = currentCamera === 'environment' ? 'user' : 'environment';
+      if (stream) {
+        await startCamera();
       }
     }
 
@@ -172,33 +179,14 @@
           logger: info => console.log(info), // Optional: Log progress
         });
         ocrResult.textContent = result.data.text.trim() || 'No text recognized';
-        ocrResult.style.display = 'block';
       } catch (error) {
         console.error('OCR error:', error);
         ocrResult.textContent = 'Error recognizing text';
-        ocrResult.style.display = 'block';
       }
     }
 
-    startButton.addEventListener('click', async () => {
-      if (startButton.textContent === 'Start Camera') {
-        startCamera();
-      } else {
-        stopCamera();
-      }
-    });
-
-    switchCameraButton.addEventListener('click', async () => {
-      currentCamera = currentCamera === 'environment' ? 'user' : 'environment'; // Toggle camera
-      stopCamera(); // Stop current camera
-      startCamera(); // Start camera with new facing mode
-    });
-
-    cameraSwitchButton.addEventListener('click', async () => {
-      currentCamera = 'environment'; // Set to rear camera
-      stopCamera(); // Stop current camera
-      startCamera(); // Start camera with rear facing mode
-    });
+    startButton.addEventListener('click', toggleCamera);
+    cameraSwitchButton.addEventListener('click', switchCamera);
   </script>
 </body>
 </html>
