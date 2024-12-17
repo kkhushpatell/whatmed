@@ -29,6 +29,7 @@
       align-items: center;
       justify-content: flex-start;
       height: 80%;
+      position: relative; /* Added for positioning the button */
     }
 
     h1 {
@@ -66,6 +67,35 @@
       margin-top: 2%;
       color: #007bff;
     }
+
+    /* Styles for the circular button */
+    #cameraSwitchButton {
+      position: absolute;
+      bottom: 20px; /* Position from the bottom */
+      right: 20px; /* Position from the right */
+      width: 50px; /* Width of the button */
+      height: 50px; /* Height of the button */
+      border-radius: 50%; /* Make it circular */
+      background-color: rgba(0, 123, 255, 0.7); /* Semi-transparent background */
+      color: white;
+      border: none;
+      display: none; /* Initially hidden */
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2vw;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #cameraSwitchButton:hover {
+      background-color: rgba(0, 123, 255, 1); /* Full opacity on hover */
+    }
+
+    #cameraSwitchButton img {
+      width: 20px; /* Icon size */
+      height: 20px; /* Icon size */
+      margin-right: 5px; /* Space between icon and text */
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -76,22 +106,33 @@
     <p id="infoText">Welcome to WhatMedicine! This application helps you identify medicines using your camera.</p>
     <div id="ocrResult"></div>
     <button id="startButton">Start Camera</button>
+    <button id="switchCameraButton" style="display: none;">Switch Camera</button>
+    
+    <!-- Circular button for switching camera -->
+    <button id="cameraSwitchButton" title="Switch to Rear Camera">
+      <img src="icon-placeholder.png" alt="Camera Icon"> Rear Camera
+    </button>
   </div>
   <script>
     const video = document.querySelector('#video');
     const startButton = document.getElementById('startButton');
+    const switchCameraButton = document.getElementById('switchCameraButton');
     const infoText = document.getElementById('infoText');
     const ocrResult = document.getElementById('ocrResult');
+    const cameraSwitchButton = document.getElementById('cameraSwitchButton');
     let stream;
     let ocrInterval;
+    let currentCamera = 'environment'; // Default to rear camera
 
     async function startCamera() {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentCamera } });
         video.srcObject = stream;
         video.style.display = 'block';
         startButton.textContent = 'Stop Camera';
+        switchCameraButton.style.display = 'block'; // Show switch camera button
         infoText.style.display = 'none';
+        cameraSwitchButton.style.display = 'flex'; // Show camera switch button when video is on
 
         video.addEventListener('loadedmetadata', () => {
           ocrInterval = setInterval(captureFrame, 1000); // Capture every second
@@ -109,7 +150,9 @@
         video.srcObject = null;
         video.style.display = 'none';
         startButton.textContent = 'Start Camera';
+        switchCameraButton.style.display = 'none'; // Hide switch camera button
         infoText.style.display = 'block';
+        cameraSwitchButton.style.display = 'none'; // Hide camera switch button when video is off
         clearInterval(ocrInterval);
         ocrResult.textContent = '';
         ocrResult.style.display = 'none';
@@ -143,6 +186,18 @@
       } else {
         stopCamera();
       }
+    });
+
+    switchCameraButton.addEventListener('click', async () => {
+      currentCamera = currentCamera === 'environment' ? 'user' : 'environment'; // Toggle camera
+      stopCamera(); // Stop current camera
+      startCamera(); // Start camera with new facing mode
+    });
+
+    cameraSwitchButton.addEventListener('click', async () => {
+      currentCamera = 'environment'; // Set to rear camera
+      stopCamera(); // Stop current camera
+      startCamera(); // Start camera with rear facing mode
     });
   </script>
 </body>
