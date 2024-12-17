@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatMedicine</title>
+  <title>WhatMed</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f0f8ff;
-      color: #333;
+      background-color: #ffffff; /* Light green background */
+      color: #000; /* Black text */
       margin: 0;
       padding: 0;
       display: flex;
@@ -19,7 +19,7 @@
 
     #container {
       text-align: center;
-      background-color: #ffffff;
+      background-color: #ffffff; /* White background for the container */
       border-radius: 10px;
       padding: 5%;
       max-width: 90%;
@@ -34,6 +34,7 @@
     h1 {
       font-size: 3vw;
       margin-bottom: 2%;
+      color: #000; /* Black text for the heading */
     }
 
     #videoContainer {
@@ -53,11 +54,10 @@
     }
 
     .button {
-      background-color: #007bff;
-      color: white;
-      border: none;
+      background-color: #4CAF50; /* Green button background */
+      color: #000; /* Black text on buttons */
+      border: none; /* Remove black border */
       border-radius: 5px;
-      padding: 1% 3%;
       font-size: 1.5vw;
       cursor: pointer;
       transition: background-color 0.3s;
@@ -65,19 +65,22 @@
     }
 
     .button:hover {
-      background-color: #0056b3;
+      background-color: #45a049; /* Darker green on hover */
+      /* Keep text color black on hover */
     }
 
     #cameraSwitchButton {
       font-size: 1.7vw;
       margin-bottom: 1%;
+      padding: 0.8% 2.5%;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    #cameraSwitchButton i {
-      margin-right: 0.5em;
+    #cameraSwitchButton img {
+      width: 1.5em; /* Set image width */
+      height: auto; /* Maintain aspect ratio */
     }
 
     #startButton {
@@ -88,26 +91,26 @@
     #ocrResult {
       font-size: 1.5vw;
       margin-top: 2%;
-      color: #007bff;
     }
 
-    #infoText {
+    p {
       font-size: 1.5vw;
-      margin-top: 2%;
-      color: #333;
+      margin-top: 2%; 
     }
-  </style>
+</style>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
 </head>
 <body>
   <div id="container">
-    <h1>WhatMedicine</h1>
+    <h1>WhatMed</h1>
     <div id="videoContainer">
       <video autoplay playsinline id="video"></video>
     </div>
-    <p id="infoText" style="display: block;">Welcome to WhatMedicine! This application helps you identify medicines using your camera.</p>
-    <button id="cameraSwitchButton" class="button" style="display: none;"><i class="fas fa-camera"></i>Switch Camera</button>
+    <p id="infoText" style="display: block;">Welcome to WhatMed! This application helps you identify medicines using your camera.</p>
+    <button id="cameraSwitchButton" class="button" style="display: none;">
+      <img src="{{ url_for('static', filename='switch.png') }}" alt="Switch Camera" style="width: 1.5em; height: auto; margin-right: 0.5em;">
+      <p>Switch Camera</p>
+    </button>    
     <button id="startButton" class="button">Start Camera</button>
     <div id="ocrResult"></div>
   </div>
