@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatMed</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #ffffff; /* Light green background */
+      color: #000; /* Black text */
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #container {
+      text-align: center;
+      background-color: #ffffff; /* White background for the container */
+      border-radius: 10px;
+      padding: 5%;
+      max-width: 90%;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 80%;
+    }
+
+    h1 {
+      font-size: 3vw;
+      margin-bottom: 2%;
+      color: #000; /* Black text for the heading */
+    }
+
+    #videoContainer {
+      position: relative;
+      width: 100%;
+      height: auto;
+      max-height: 70%;
+      display: block;
+    }
+
+    video {
+      border: none;
+      border-radius: 10px;
+      width: 100%;
+      max-height: 100%;
+      display: none;
+    }
+
+    .button {
+      background-color: #4CAF50; /* Green button background */
+      color: #000; /* Black text on buttons */
+      border: none; /* Remove black border */
+      border-radius: 5px;
+      font-size: 1.5vw;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      margin-top: 1%;
+    }
+
+    .button:hover {
+      background-color: #45a049; /* Darker green on hover */
+      /* Keep text color black on hover */
+    }
+
+    #cameraSwitchButton {
+      font-size: 1.7vw;
+      margin-bottom: 1%;
+      padding: 0.8% 2.5%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #cameraSwitchButton img {
+      width: 1.5em; /* Set image width */
+      height: auto; /* Maintain aspect ratio */
+    }
+
+    #startButton {
+      font-size: 1.3vw;
+      padding: 0.8% 2.5%;
+    }
+
+    #ocrResult {
+      font-size: 1.5vw;
+      margin-top: 2%;
+    }
+
+    p {
+      font-size: 1.5vw;
+      margin-top: 2%;
+      margin-bottom: 2%; 
+    }
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <div id="container">
+    <h1>WhatMed</h1>
+    <div id="videoContainer">
+      <video autoplay playsinline id="video"></video>
+    </div>
+    <p id="infoText" style="display: block;">Welcome to WhatMed! This application helps you identify medicines using your camera.</p>
+    <button id="cameraSwitchButton" class="button" style="display: none;">
+      <img src="{{ url_for('static', filename='switch.png') }}" alt="Switch Camera" style="width: 1.5em; height: auto; margin-right: 0.5em;">
+      <p>Switch Camera</p>
+    </button>    
+    <button id="startButton" class="button">Start Camera</button>
+    <div id="ocrResult"></div>
+  </div>
+  <script>
+    const video = document.querySelector('#video');
+    const startButton = document.getElementById('startButton');
+    const cameraSwitchButton = document.getElementById('cameraSwitchButton');
+    const infoText = document.getElementById('infoText');
+    const ocrResult = document.getElementById('ocrResult');
+    let stream;
+    let ocrInterval;
+    let currentCamera = 'environment'; // Default to rear camera
+
+    async function toggleCamera() {
+      if (stream) {
+        stopCamera();
+      } else {
+        startCamera();
+      }
+    }
+
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentCamera } });
+        video.srcObject = stream;
+        video.style.display = 'block';
+        startButton.textContent = 'Stop Camera';
+        infoText.style.display = 'none';
+        cameraSwitchButton.style.display = 'block';
+        ocrInterval = setInterval(captureFrame, 1000); // Capture every second
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        alert('Unable to access camera: ' + error.message);
+      }
+    }
+
+    function stopCamera() {
+      if (stream) {
+        const tracks = stream.getTracks();
+        tracks.forEach(track => track.stop());
+        video.srcObject = null;
+        stream = null;
+        video.style.display = 'none';
+        startButton.textContent = 'Start Camera';
+        infoText.style.display = 'block';
+        cameraSwitchButton.style.display = 'none';
+        clearInterval(ocrInterval);
+        ocrResult.textContent = '';
+      }
+    }
+
+    async function switchCamera() {
+      currentCamera = currentCamera === 'environment' ? 'user' : 'environment';
+      if (stream) {
+        await startCamera();
+      }
+    }
+
+    async function captureFrame() {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL();
+
+      try {
+        const result = await Tesseract.recognize(image, 'eng', {
+          logger: info => console.log(info), // Optional: Log progress
+        });
+        ocrResult.textContent = result.data.text.trim() || 'No text recognized';
+      } catch (error) {
+        console.error('OCR error:', error);
+        ocrResult.textContent = 'Error recognizing text';
+      }
+    }
+
+    startButton.addEventListener('click', toggleCamera);
+    cameraSwitchButton.addEventListener('click', switchCamera);
+  </script>
+</body>
+</html>
