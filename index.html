@@ -7,8 +7,8 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #ffffff; /* Light green background */
-      color: #000; /* Black text */
+      background-color: #ffffff;
+      color: #000;
       margin: 0;
       padding: 0;
       display: flex;
@@ -19,7 +19,7 @@
 
     #container {
       text-align: center;
-      background-color: #ffffff; /* White background for the container */
+      background-color: #ffffff;
       border-radius: 10px;
       padding: 5%;
       max-width: 90%;
@@ -34,7 +34,7 @@
     h1 {
       font-size: 3vw;
       margin-bottom: 2%;
-      color: #000; /* Black text for the heading */
+      color: #000;
     }
 
     #videoContainer {
@@ -54,9 +54,9 @@
     }
 
     .button {
-      background-color: #4CAF50; /* Green button background */
-      color: #000; /* Black text on buttons */
-      border: none; /* Remove black border */
+      background-color: #4CAF50;
+      color: #000;
+      border: none;
       border-radius: 5px;
       font-size: 1.5vw;
       cursor: pointer;
@@ -65,8 +65,7 @@
     }
 
     .button:hover {
-      background-color: #45a049; /* Darker green on hover */
-      /* Keep text color black on hover */
+      background-color: #45a049;
     }
 
     #cameraSwitchButton {
@@ -79,8 +78,8 @@
     }
 
     #cameraSwitchButton img {
-      width: 1.5em; /* Set image width */
-      height: auto; /* Maintain aspect ratio */
+      width: 1.5em;
+      height: auto;
     }
 
     #startButton {
@@ -96,9 +95,9 @@
     p {
       font-size: 1.5vw;
       margin-top: 2%;
-      margin-bottom: 2%; 
+      margin-bottom: 2%;
     }
-</style>
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
 <body>
@@ -110,7 +109,7 @@
     <p id="infoText" style="display: block;">Welcome to WhatMed! This application helps you identify medicines using your camera.</p>
     <button id="cameraSwitchButton" class="button" style="display: none;">
       <img src="{{ url_for('static', filename='switch.png') }}" alt="Switch Camera" style="width: 1.5em; height: auto; margin-right: 0.5em;">
-      <p>Switch Camera</p>
+      Switch Camera
     </button>    
     <button id="startButton" class="button">Start Camera</button>
     <div id="ocrResult"></div>
@@ -123,7 +122,8 @@
     const ocrResult = document.getElementById('ocrResult');
     let stream;
     let ocrInterval;
-    let currentCamera = 'environment'; // Default to rear camera
+    let currentCamera = 'environment';
+    let ocrOutputs = []; // Store all cleaned recognized text
 
     async function toggleCamera() {
       if (stream) {
@@ -141,7 +141,7 @@
         startButton.textContent = 'Stop Camera';
         infoText.style.display = 'none';
         cameraSwitchButton.style.display = 'block';
-        ocrInterval = setInterval(captureFrame, 1000); // Capture every second
+        ocrInterval = setInterval(captureFrame, 500); // Capture every 500ms
       } catch (error) {
         console.error('Error accessing camera:', error);
         alert('Unable to access camera: ' + error.message);
@@ -175,18 +175,31 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
+      context.filter = 'grayscale(1) contrast(200%)';
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const image = canvas.toDataURL();
 
       try {
-        const result = await Tesseract.recognize(image, 'eng', {
-          logger: info => console.log(info), // Optional: Log progress
-        });
-        ocrResult.textContent = result.data.text.trim() || 'No text recognized';
+        const result = await Tesseract.recognize(image, 'eng');
+        const rawText = result.data.text.trim();
+        const cleanedText = cleanOCRResults(rawText); // Clean the text
+        ocrResult.textContent = cleanedText || 'No text recognized'; // Display immediate cleaned result
+        if (cleanedText) {
+          ocrOutputs.push(cleanedText); // Store cleaned text in the list
+        }
       } catch (error) {
         console.error('OCR error:', error);
         ocrResult.textContent = 'Error recognizing text';
       }
+    }
+
+    function cleanOCRResults(ocrText) {
+      return ocrText
+        .replace(/[^\w\s\-]/g, '') // Remove non-alphanumeric characters except hyphens
+        .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+        .trim()
+        .split(/\s+/)
+        .filter(word => /^[A-Za-z0-9\-]+$/.test(word) && word.length >= 3); // Keep meaningful words
     }
 
     startButton.addEventListener('click', toggleCamera);
