@@ -109,7 +109,7 @@
     <p id="infoText" style="display: block;">Welcome to WhatMed! This application helps you identify medicines using your camera.</p>
     <button id="cameraSwitchButton" class="button" style="display: none;">
       <img src="{{ url_for('static', filename='switch.png') }}" alt="Switch Camera" style="width: 1.5em; height: auto; margin-right: 0.5em;">
-      Switch Camera
+      <p>Switch Camera</p>
     </button>    
     <button id="startButton" class="button">Start Camera</button>
     <div id="ocrResult"></div>
@@ -134,19 +134,34 @@
     }
 
     async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentCamera } });
-        video.srcObject = stream;
-        video.style.display = 'block';
-        startButton.textContent = 'Stop Camera';
-        infoText.style.display = 'none';
-        cameraSwitchButton.style.display = 'block';
-        ocrInterval = setInterval(captureFrame, 500); // Capture every 500ms
-      } catch (error) {
-        console.error('Error accessing camera:', error);
-        alert('Unable to access camera: ' + error.message);
-      }
-    }
+  try {
+    await resetListOnServer();
+
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentCamera } });
+    video.srcObject = stream;
+    video.style.display = 'block';
+    startButton.textContent = 'Stop Camera';
+    infoText.style.display = 'none';
+    cameraSwitchButton.style.display = 'block';
+    ocrInterval = setInterval(captureFrame, 500); // Capture every 500 ms
+  } catch (error) {
+    console.error('Error accessing camera:', error);
+    alert('Unable to access camera: ' + error.message);
+  }
+}
+
+async function resetListOnServer() {
+  try {
+    await fetch('/resetlist', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    console.error('Error resetting list:', error);
+  }
+}
 
     function stopCamera() {
       if (stream) {
@@ -184,8 +199,9 @@
         const rawText = result.data.text.trim();
         const cleanedText = cleanOCRResults(rawText); // Clean the text
         ocrResult.textContent = cleanedText || 'No text recognized'; // Display immediate cleaned result
-        if (cleanedText) {
+        if (cleanedText && !ocrOutputs.includes(cleanedText)) {
           ocrOutputs.push(cleanedText); // Store cleaned text in the list
+          sendOcrOutputs(); // Send the updated list to the server
         }
       } catch (error) {
         console.error('OCR error:', error);
@@ -200,6 +216,34 @@
         .trim()
         .split(/\s+/)
         .filter(word => /^[A-Za-z0-9\-]+$/.test(word) && word.length >= 3); // Keep meaningful words
+    }
+
+    function sendOcrOutputs() {
+      if (ocrOutputs.length > 0) {
+        fetch('/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ outputs: ocrOutputs }),
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === "continue") {
+            // Continue the OCR process
+            console.log("Continuing OCR process...");
+          } else if(data.html) {
+            stopCamera();
+            document.open();
+            document.write(data.html);
+            document.close();
+            ocrOutputs = []; // Clear the list after sending
+          }
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+      }
     }
 
     startButton.addEventListener('click', toggleCamera);
